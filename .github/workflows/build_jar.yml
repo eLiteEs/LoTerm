@@ -25,7 +25,7 @@ jobs:
         run: mvn clean package
 
       - name: Upload JAR artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: lo-term-jar
           path: target/LoTerm-1.0.0-jar-with-dependencies.jar
