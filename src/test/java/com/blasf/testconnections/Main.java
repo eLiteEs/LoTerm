@@ -9,7 +9,7 @@ public class Main {
         Socket s = new Socket("192.168.0.108", 8080);
         DataOutputStream dos = new DataOutputStream(s.getOutputStream());
 
-        dos.writeUTF("RUNwinver");
+        dos.writeUTF("RUNecho a");
         dos.flush();
         s.close();
     }
