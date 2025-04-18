@@ -44,35 +44,38 @@ public class Main {
 
                 // Now process the command
                 if(request.startsWith("RUN")) {
-                    String command = request.substring(3);
-                    ProcessBuilder processBuilder = new ProcessBuilder();
-                    processBuilder.command(command.split(" "));
-                    processBuilder.directory(new File(dir));
-                    StringBuilder output = new StringBuilder();
+                    String command = request.substring(3); // Get the command of the request
+
+                    ProcessBuilder processBuilder = new ProcessBuilder(); // Create a process builder
+                    processBuilder.command(command.split(" ")); // Set the command on the process builder
+                    processBuilder.directory(new File(dir)); // Set the running directory for running the command
                     try {
-                        Process process = processBuilder.start();
-                        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+                        Process process = processBuilder.start(); // Start the command
+                        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream())); // Get the reader of the process
+
+                        // Read line by line the output
                         String line;
                         while ((line = reader.readLine()) != null) {
-                            output.append(line).append("\n");
+                            System.out.println(line);
                         }
-                        process.waitFor();
-                    } catch (IOException | InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                } else if(request.startsWith("EXIT")) {
-                    exit = true;
-                } else if(request.startsWith("SDIR")) {
-                    String newdir = request.substring(4); // Get the new directory
 
-                    if(!new File(newdir).exists()) { // Check if the directory doesn't exists
-                        System.err.println("Directory " + newdir + " doesn't exists, not changing it."); // Log the error
+                        process.waitFor(); // Wait to the command to finish
+                    } catch (IOException | InterruptedException e) {
+                        System.err.println("Error: \n" + e.getMessage()); // Display the error
+                    }
+                } else if(request.startsWith("EXIT")) { // Exit the program
+                    exit = true; // Turn on the flag to exit the loop
+                } else if(request.startsWith("MOVE")) { // Change the current directory
+                    String newDir = request.substring(4); // Get the new directory
+
+                    if(!new File(newDir).exists()) { // Check if the directory doesn't exist
+                        System.err.println("Directory " + newDir + " doesn't exists, not changing it."); // Log the error
                         continue; // Skip the change code
                     }
 
-                    dir = newdir; // Change the current directory
-                } else {
-
+                    dir = newDir; // Change the current directory
+                } else { // Command couldn't be found
+                    System.err.println("Unknown command."); // Log the error
                 }
             } catch (IOException e) {
                 throw new RuntimeException(e);
