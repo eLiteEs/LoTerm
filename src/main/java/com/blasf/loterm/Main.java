@@ -22,7 +22,7 @@ public class Main {
     }
     
     public static void main(String[] args) {
-        int port = 8080; // Use 4040 as default port
+        int port = 8080; // Use 8080 as default port
         String dir = "C:\\Users\\" + System.getProperty("user.name") + "\\"; // Directory in which the commands are going to be run
 
         if(args.length >= 1) { // Check if the user introduced a port
@@ -33,7 +33,7 @@ public class Main {
                     port = 4040; // Return to the default port
                 }
             } catch (NumberFormatException e) { // The console argument isn't a number
-                err("Error: The specified port isn't available, using default 4040."); // Log the error
+                err("Error: The specified port isn't available, using default 8080."); // Log the error
             }
         }
 
