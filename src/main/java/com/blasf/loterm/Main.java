@@ -1,8 +1,10 @@
 package com.blasf.loterm;
 
 import java.io.*;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.util.Objects;
 
 public class Main {
@@ -18,6 +20,17 @@ public class Main {
     private static void err(String text) { // Function for logging errors
         if(showLogs) { // Check if the user wants to see the logs
             System.err.println(text); // Show the error
+        }
+    }
+
+    // Function for getting the local IP address
+    public static String getLocalIPAddress() {
+        try {
+            InetAddress localHost = InetAddress.getLocalHost(); // Create a InetAddess object for getting the host
+            return localHost.getHostAddress(); // Return the IPv4
+        } catch (UnknownHostException e) {
+            e.printStackTrace(); // Handle the exception according to your needs
+            return null;
         }
     }
     
@@ -49,7 +62,7 @@ public class Main {
             }
         }
 
-        log("Started server at port: " + port); // Show the port of the server
+        log("Started server at port: " + port + " and IPv4: " + getLocalIPAddress()); // Show the port and IP of the server
 
         boolean exit = false; // Flag for closing the program
 
