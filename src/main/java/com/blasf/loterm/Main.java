@@ -29,8 +29,8 @@ public class Main {
             try { // Check if the user introduced a valid port
                 port = Integer.parseInt(args[0]); // Save the port to the port variable
                 if(port <= 0 || port >= 9999) { // Check if the port is outside 0 or 9999 (invalid port)
-                    err("Error: The specified port isn't available, using default 4040."); // Log the error
-                    port = 4040; // Return to the default port
+                    err("Error: The specified port isn't available, using default 8080."); // Log the error
+                    port = 8080; // Return to the default port
                 }
             } catch (NumberFormatException e) { // The console argument isn't a number
                 err("Error: The specified port isn't available, using default 8080."); // Log the error
