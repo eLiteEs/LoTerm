@@ -6,11 +6,13 @@ import java.net.Socket;
 
 public class Main {
     public static void main(String[] args) throws IOException {
-        Socket s = new Socket("192.168.0.108", 8080);
-        DataOutputStream dos = new DataOutputStream(s.getOutputStream());
+        for(int i = 0; i < 10; i++) {
+            Socket s = new Socket("192.168.1.130", 8080);
+            DataOutputStream dos = new DataOutputStream(s.getOutputStream());
 
-        dos.writeUTF("RUNecho a");
-        dos.flush();
-        s.close();
+            dos.writeUTF("RUNecho a");
+            dos.flush();
+            s.close();
+        }
     }
 }
