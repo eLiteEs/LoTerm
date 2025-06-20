@@ -1,130 +1,172 @@
-package com.blasf.loterm;
+package com.blasf.loterm; // Define the package name
 
-import java.io.*;
-import java.net.InetAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.net.UnknownHostException;
-import java.util.Objects;
+import java.io.*; // Import I/O classes for reading/writing
+import java.net.InetAddress; // For getting IP address
+import java.net.ServerSocket; // For server socket operations
+import java.net.Socket; // For handling client sockets
+import java.net.UnknownHostException; // For catching unknown host exceptions
+import java.util.concurrent.BlockingQueue; // For thread-safe command queue
+import java.util.concurrent.LinkedBlockingQueue; // Concrete implementation of BlockingQueue
+import java.util.concurrent.atomic.AtomicReference; // Mutable container for the current working directory
 
-public class Main {
-    private static boolean showCommands = false;
-    private static boolean showLogs = true;
-    
-    private static void log(String text) { // Function for logging messages
-        if(showLogs) { // Check if the user wants to see the logs
-            System.out.println(text); // Show the message
+public class Main { // Main class definition
+
+    private static boolean showCommands = false; // Whether to display commands being run
+    private static boolean showLogs = true; // Whether to display logs in the console
+
+    // Function for logging messages to standard output
+    private static void log(String text) {
+        if (showLogs) { // Only log if logging is enabled
+            System.out.println(text); // Print message
         }
     }
-    
-    private static void err(String text) { // Function for logging errors
-        if(showLogs) { // Check if the user wants to see the logs
-            System.err.println(text); // Show the error
+
+    // Function for logging errors to standard error
+    private static void err(String text) {
+        if (showLogs) { // Only log errors if logging is enabled
+            System.err.println(text); // Print error message
         }
     }
 
-    // Function for getting the local IP address
+    // Method to get the local IP address of the server
     public static String getLocalIPAddress() {
         try {
-            InetAddress localHost = InetAddress.getLocalHost(); // Create a InetAddess object for getting the host
-            return localHost.getHostAddress(); // Return the IPv4
-        } catch (UnknownHostException e) {
-            e.printStackTrace(); // Handle the exception according to your needs
-            return null;
+            InetAddress localHost = InetAddress.getLocalHost(); // Try to get local host address
+            return localHost.getHostAddress(); // Return the IP address as string
+        } catch (UnknownHostException e) { // Catch unknown host exception
+            err("Error getting IP: " + e.getMessage()); // Log error message
+            return null; // Return null if error occurs
         }
     }
-    
-    public static void main(String[] args) {
-        int port = 8080; // Use 4040 as default port
-        String dir = "C:\\Users\\" + System.getProperty("user.name") + "\\"; // Directory in which the commands are going to be run
 
-        if(args.length >= 1) { // Check if the user introduced a port
-            try { // Check if the user introduced a valid port
-                port = Integer.parseInt(args[0]); // Save the port to the port variable
-                if(port <= 0 || port >= 9999) { // Check if the port is outside 0 or 9999 (invalid port)
-                    err("Error: The specified port isn't available, using default 4040."); // Log the error
-                    port = 4040; // Return to the default port
+    public static void main(String[] args) { // Main method, entry point
+
+        int port = 4040; // Default port set to 4040
+
+        // AtomicReference used to store the current working directory
+        AtomicReference<String> dir = new AtomicReference<>("C:\\Users\\" + System.getProperty("user.name") + "\\");
+
+        // If a port number is passed as first argument
+        if (args.length >= 1) {
+            try {
+                port = Integer.parseInt(args[0]); // Try to parse the port
+                if (port <= 0 || port >= 9999) { // Validate the port range
+                    err("Error: The specified port isn't available, using default 4040."); // Log if invalid
+                    port = 4040; // Reset to default port
                 }
-            } catch (NumberFormatException e) { // The console argument isn't a number
-                err("Error: The specified port isn't available, using default 4040."); // Log the error
+            } catch (NumberFormatException e) { // Catch parsing error
+                err("Error: Invalid port specified, using default 4040."); // Log and revert to default
+                port = 4040; // Reset port
             }
         }
 
-        if(args.length >= 2) { // Check if the user wants to show the commands to be run
-            if(Objects.equals(args[1], "yes")) { // The user said yes
+        // Check if second argument is used to enable command logging
+        if (args.length >= 2) {
+            if ("yes".equalsIgnoreCase(args[1])) { // If "yes", enable command logging
                 showCommands = true;
             }
         }
 
-        if(args.length == 3) { // Check if the user wants to show the logs
-            if(Objects.equals(args[2], "no")) { // The user said no
+        // Check if third argument disables logs
+        if (args.length == 3) {
+            if ("no".equalsIgnoreCase(args[2])) { // If "no", disable logs
                 showLogs = false;
             }
         }
 
-        log("Started server at port: " + port + " and IPv4: " + getLocalIPAddress()); // Show the port and IP of the server
+        // Log startup info: port and IP address
+        log("Started server at port: " + port + " and IPv4: " + getLocalIPAddress());
 
-        boolean exit = false; // Flag for closing the program
+        // BlockingQueue for handling commands in order
+        BlockingQueue<String> commandQueue = new LinkedBlockingQueue<>();
 
-        while(!exit) {
-            try {
-                ServerSocket ss = new ServerSocket(port); // Create a server with that port
-                log("Opened port " + port + ". Waiting for connection..."); // Log the status
+        // Boolean flag to tell threads when to stop (wrapped in array to mutate inside lambda)
+        boolean[] exitFlag = {false};
 
-                Socket s = ss.accept(); // Wait until a socket is sent to the server
-                log("Connection received."); // Log status
+        // Thread to process commands from the queue
+        Thread commandHandler = new Thread(() -> {
+            while (!exitFlag[0]) { // Keep running unless told to exit
+                try {
+                    String request = commandQueue.take(); // Block until a command is available
 
-                DataInputStream dis = new DataInputStream(s.getInputStream()); // Get the InputStream of the server for reading the request
+                    if (request.startsWith("RUN")) { // If command is to run something
+                        String command = request.substring(3).trim(); // Extract the command after "RUN"
 
-                String request = dis.readUTF(); // Read the request
-                log("Received: " + request); // Show the request
-
-                ss.close(); // Close the server
-                s.close(); // Close the socket
-                dis.close(); // Close the reader
-
-                // Now process the command
-                if(request.startsWith("RUN")) {
-                    String command = request.substring(3); // Get the command of the request
-
-                    if(showCommands) { // The user wants to see the commands being runned
-                        System.out.println(command); // Show the command
-                    }
-
-                    ProcessBuilder processBuilder = new ProcessBuilder(); // Create a process builder
-                    processBuilder.command(command.split(" ")); // Set the command on the process builder
-                    processBuilder.directory(new File(dir)); // Set the running directory for running the command
-                    try {
-                        Process process = processBuilder.start(); // Start the command
-                        BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream())); // Get the reader of the process
-
-                        // Read line by line the output
-                        String line;
-                        while ((line = reader.readLine()) != null) {
-                            System.out.println(line);
+                        if (showCommands) { // Show command if enabled
+                            log("Running: " + command);
                         }
 
-                        process.waitFor(); // Wait to the command to finish
-                    } catch (IOException | InterruptedException e) {
-                        err("Error: \n" + e.getMessage()); // Display the error
-                    }
-                } else if(request.startsWith("EXIT")) { // Exit the program
-                    exit = true; // Turn on the flag to exit the loop
-                } else if(request.startsWith("MOVE")) { // Change the current directory
-                    String newDir = request.substring(4); // Get the new directory
+                        // Use cmd.exe to run command through Windows shell
+                        ProcessBuilder processBuilder = new ProcessBuilder("cmd.exe", "/c", command);
+                        processBuilder.directory(new File(dir.get())); // Set working directory
+                        processBuilder.redirectErrorStream(true); // Combine stdout and stderr
 
-                    if(!new File(newDir).exists()) { // Check if the directory doesn't exist
-                        err("Directory " + newDir + " doesn't exists, not changing it."); // Log the error
-                        continue; // Skip the change code
+                        try {
+                            Process process = processBuilder.start(); // Start the process
+
+                            // Read the output of the command
+                            try (InputStream is = process.getInputStream()) {
+                                byte[] buffer = new byte[1024]; // Create buffer
+                                int bytesRead;
+                                while ((bytesRead = is.read(buffer)) != -1) { // Read until end
+                                    System.out.write(buffer, 0, bytesRead); // Output to console
+                                }
+                                System.out.flush(); // Ensure output is written
+                            }
+
+                            process.waitFor(); // Wait for process to finish
+
+                        } catch (IOException | InterruptedException e) { // Handle errors
+                            err("Execution error: " + e.getMessage()); // Log error
+                        }
+
+                    } else if (request.startsWith("EXIT")) { // Handle exit command
+                        exitFlag[0] = true; // Set exit flag to true
+                    } else if (request.startsWith("MOVE")) { // Handle directory change
+                        String newDir = request.substring(4).trim(); // Extract new directory
+                        if (!new File(newDir).exists()) { // Check if it exists
+                            err("Directory " + newDir + " doesn't exist, not changing it."); // Log error
+                        } else {
+                            dir.set(newDir); // Set new directory
+                            log("Changed directory to: " + newDir); // Log change
+                        }
+
+                    } else { // If unknown command
+                        err("Unknown command."); // Log error
                     }
 
-                    dir = newDir; // Change the current directory
-                } else { // Command couldn't be found
-                    err("Unknown command."); // Log the error
+                } catch (InterruptedException e) { // Handle thread interruption
+                    err("Command queue interrupted: " + e.getMessage()); // Log error
                 }
-            } catch (IOException e) {
-                throw new RuntimeException(e);
             }
+        });
+
+        commandHandler.start(); // Start the command processing thread
+
+        // Try to open the server socket on the chosen port
+        try (ServerSocket ss = new ServerSocket(port)) {
+            log("Opened port " + port + ". Waiting for connections..."); // Log socket creation
+
+            // Keep accepting connections until exit command is received
+            while (!exitFlag[0]) {
+                // Use try-with-resources to handle client socket
+                try (Socket s = ss.accept(); // Accept incoming client
+                     DataInputStream dis = new DataInputStream(s.getInputStream())) { // Get input stream
+
+                    log("Connection received."); // Log connection
+
+                    String request = dis.readUTF(); // Read the command sent by client
+                    log("Received: " + request); // Log command
+
+                    commandQueue.put(request); // Add command to processing queue
+
+                } catch (IOException | InterruptedException e) { // Handle exceptions
+                    err("Error handling connection: " + e.getMessage()); // Log error
+                }
+            }
+
+        } catch (IOException e) { // Handle failure to open server socket
+            throw new RuntimeException("Failed to open server socket on port " + port, e); // Rethrow as unchecked
         }
     }
 }
