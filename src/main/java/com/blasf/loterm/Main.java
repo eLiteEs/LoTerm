@@ -89,37 +89,59 @@ public class Main { // Main class definition
                 try {
                     String request = commandQueue.take(); // Block until a command is available
 
-                    if (request.startsWith("RUN")) { // If command is to run something
-                        String command = request.substring(3).trim(); // Extract the command after "RUN"
+                    // Dentro del bloque donde procesas el comando "RUN" en el Thread commandHandler
+                    if (request.startsWith("RUN")) {
+                        String command = request.substring(3).trim();
 
-                        if (showCommands) { // Show command if enabled
+                        if (showCommands) {
                             log("Running: " + command);
                         }
 
-                        // Use cmd.exe to run command through Windows shell
                         ProcessBuilder processBuilder = new ProcessBuilder("cmd.exe", "/c", command);
-                        processBuilder.directory(new File(dir.get())); // Set working directory
-                        processBuilder.redirectErrorStream(true); // Combine stdout and stderr
+                        processBuilder.directory(new File(dir.get()));
+                        processBuilder.redirectErrorStream(true);
 
                         try {
-                            Process process = processBuilder.start(); // Start the process
+                            Process process = processBuilder.start();
 
-                            // Read the output of the command
-                            try (InputStream is = process.getInputStream()) {
-                                byte[] buffer = new byte[1024]; // Create buffer
-                                int bytesRead;
-                                while ((bytesRead = is.read(buffer)) != -1) { // Read until end
-                                    System.out.write(buffer, 0, bytesRead); // Output to console
+                            // Hilo para leer la salida del proceso
+                            Thread outputThread = new Thread(() -> {
+                                try (InputStream is = process.getInputStream()) {
+                                    byte[] buffer = new byte[1024];
+                                    int bytesRead;
+                                    while ((bytesRead = is.read(buffer)) != -1) {
+                                        System.out.write(buffer, 0, bytesRead);
+                                        System.out.flush();
+                                    }
+                                } catch (IOException e) {
+                                    err("Error reading process output: " + e.getMessage());
                                 }
-                                System.out.flush(); // Ensure output is written
-                            }
+                            });
+                            outputThread.start();
 
-                            process.waitFor(); // Wait for process to finish
+                            // Hilo para enviar entrada al proceso
+                            Thread inputThread = new Thread(() -> {
+                                try (OutputStream os = process.getOutputStream();
+                                     BufferedReader consoleReader = new BufferedReader(new InputStreamReader(System.in))) {
 
-                        } catch (IOException | InterruptedException e) { // Handle errors
-                            err("Execution error: " + e.getMessage()); // Log error
+                                    String line;
+                                    while ((line = consoleReader.readLine()) != null) {
+                                        os.write((line + "\n").getBytes());
+                                        os.flush();
+                                    }
+                                } catch (IOException e) {
+                                    err("Error writing to process input: " + e.getMessage());
+                                }
+                            });
+                            inputThread.start();
+
+                            process.waitFor();
+                            outputThread.join(); // Esperar a que termine de leer la salida
+                            inputThread.interrupt(); // Interrumpir el hilo de entrada (ya que System.in no se cierra)
+
+                        } catch (IOException | InterruptedException e) {
+                            err("Execution error: " + e.getMessage());
                         }
-
                     } else if (request.startsWith("EXIT")) { // Handle exit command
                         exitFlag[0] = true; // Set exit flag to true
                     } else if (request.startsWith("MOVE")) { // Handle directory change

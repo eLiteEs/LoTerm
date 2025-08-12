@@ -6,14 +6,14 @@ import java.net.Socket;
 
 public class Main {
     public static void main(String[] args) {
-        for (int i = 0; i < 10; i++) {
-            try (Socket socket = new Socket("192.168.0.108", 8080)) {
+        //for (int i = 0; i < 10; i++) {
+            try (Socket socket = new Socket("192.168.1.138", 4040)) {
                 DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
-                dos.writeUTF("RUNecho Connection " + i);
+                dos.writeUTF("RUN\"C:\\Users\\blasf\\AliCodeProjects\\damn\\target\\main.exe\"");
                 dos.flush();
             } catch (IOException e) {
-                System.err.println("Failed to send command " + i + ": " + e.getMessage());
+                System.err.println("Failed to send command " + 0 + ": " + e.getMessage());
             }
-        }
+        //}
     }
 }
