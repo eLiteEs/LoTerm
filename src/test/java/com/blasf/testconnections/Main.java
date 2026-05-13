@@ -7,9 +7,9 @@ import java.net.Socket;
 public class Main {
     public static void main(String[] args) {
         //for (int i = 0; i < 10; i++) {
-            try (Socket socket = new Socket("192.168.1.138", 4040)) {
+            try (Socket socket = new Socket("127.0.1.1", 7575)) {
                 DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
-                dos.writeUTF("RUN\"C:\\Users\\blasf\\AliCodeProjects\\damn\\target\\main.exe\"");
+                dos.writeUTF("RUNmank -s");
                 dos.flush();
             } catch (IOException e) {
                 System.err.println("Failed to send command " + 0 + ": " + e.getMessage());

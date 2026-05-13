@@ -39,12 +39,33 @@ public class Main { // Main class definition
         }
     }
 
+    // Method to get the home path independently from Windows 
+    public static String userPath() {
+        return System.getProperty("user.home"); // Just return the home path
+    }
+
+    // Method that detects current operating system and returns a Process Builder with the command line of that
+    // OS with a running command.
+    public static ProcessBuilder commandline(String command) {
+        String os_name = System.getProperty("os.name").toLowerCase(); // Get OS name
+        
+	if(os_name.contains("win")) {
+	    // Windows
+            return new ProcessBuilder("cmd.exe", "/c", command);
+	} else if(os_name.contains("nux") || os_name.contains("mac")) {
+            // Linux/UNIX or MacOS
+	    return new ProcessBuilder("/bin/bash", "-c", command);
+	}
+
+	return new ProcessBuilder(""); // Don't return anything if the user keeps using this program on TempleOS
+    }
+
     public static void main(String[] args) { // Main method, entry point
 
         int port = 4040; // Default port set to 4040
 
         // AtomicReference used to store the current working directory
-        AtomicReference<String> dir = new AtomicReference<>("C:\\Users\\" + System.getProperty("user.name") + "\\");
+        AtomicReference<String> dir = new AtomicReference<>(userPath());
 
         // If a port number is passed as first argument
         if (args.length >= 1) {
@@ -97,7 +118,7 @@ public class Main { // Main class definition
                             log("Running: " + command);
                         }
 
-                        ProcessBuilder processBuilder = new ProcessBuilder("cmd.exe", "/c", command);
+                        ProcessBuilder processBuilder = commandline(command);
                         processBuilder.directory(new File(dir.get()));
                         processBuilder.redirectErrorStream(true);
 
@@ -146,7 +167,10 @@ public class Main { // Main class definition
                         exitFlag[0] = true; // Set exit flag to true
                     } else if (request.startsWith("MOVE")) { // Handle directory change
                         String newDir = request.substring(4).trim(); // Extract new directory
-                        if (!new File(newDir).exists()) { // Check if it exists
+                        
+			File dirObj = new File(newDir);
+
+			if (!dirObj.exists() || !dirObj.isDirectory()) { // Check if it doesn't exist or if it isn't a directory.
                             err("Directory " + newDir + " doesn't exist, not changing it."); // Log error
                         } else {
                             dir.set(newDir); // Set new directory
@@ -190,5 +214,6 @@ public class Main { // Main class definition
         } catch (IOException e) { // Handle failure to open server socket
             throw new RuntimeException("Failed to open server socket on port " + port, e); // Rethrow as unchecked
         }
+
     }
 }
